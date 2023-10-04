@@ -1,8 +1,10 @@
-import { json } from "@remix-run/node";
+import { json } from "@vercel/remix";
 import { useLoaderData } from "@remix-run/react";
 import Navbar from "~/components/navbar";
 import { getAllCompanies } from "~/utils/company_details.server";
 import csvDownload from "json-to-csv-export";
+
+export const config = { runtime: "edge" };
 
 export async function loader() {
   const companies = await getAllCompanies();

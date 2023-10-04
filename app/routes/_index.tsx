@@ -4,7 +4,7 @@ import {
   json,
   unstable_createMemoryUploadHandler,
   unstable_parseMultipartFormData,
-} from "@remix-run/node";
+} from "@vercel/remix";
 import Navbar from "~/components/navbar";
 import { z } from "zod";
 import { withZod } from "@remix-validated-form/with-zod";
@@ -17,6 +17,8 @@ import { SubmitButton } from "~/components/submit_button";
 import { addCompany } from "~/utils/company_details.server";
 import { useActionData } from "@remix-run/react";
 import FileInput from "~/components/file_input";
+
+export const config = { runtime: "edge" };
 
 export const meta: MetaFunction = () => {
   return [
