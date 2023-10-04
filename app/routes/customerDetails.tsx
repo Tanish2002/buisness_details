@@ -1,4 +1,4 @@
-import { json } from "@vercel/remix";
+import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 import Navbar from "~/components/navbar";
 import { getAllCompanies } from "~/utils/company_details.server";

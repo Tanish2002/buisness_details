@@ -4,7 +4,7 @@ import {
   json,
   unstable_createMemoryUploadHandler,
   unstable_parseMultipartFormData,
-} from "@vercel/remix";
+} from "@remix-run/node";
 import Navbar from "~/components/navbar";
 import { z } from "zod";
 import { withZod } from "@remix-validated-form/with-zod";
