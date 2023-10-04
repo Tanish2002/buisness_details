@@ -18,8 +18,6 @@ import { addCompany } from "~/utils/company_details.server";
 import { useActionData } from "@remix-run/react";
 import FileInput from "~/components/file_input";
 
-export const config = { runtime: "edge" };
-
 export const meta: MetaFunction = () => {
   return [
     { title: "Balaji Customer Details" },

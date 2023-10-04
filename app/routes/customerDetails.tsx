@@ -4,8 +4,6 @@ import Navbar from "~/components/navbar";
 import { getAllCompanies } from "~/utils/company_details.server";
 import csvDownload from "json-to-csv-export";
 
-export const config = { runtime: "edge" };
-
 export async function loader() {
   const companies = await getAllCompanies();
   const finalJSON = companies.map((company) => {
