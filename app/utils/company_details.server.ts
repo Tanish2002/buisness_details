@@ -30,7 +30,7 @@ export async function getAllCompaniesCSV() {
 }
 export async function addCompany(
   customerDetail: typeof customerDetails.$inferInsert,
-  card_images: File[]
+  card_images: File[] | undefined
 ) {
   const savedDetails = await db
     .insert(customerDetails)
@@ -38,9 +38,11 @@ export async function addCompany(
     .returning();
 
   let card_url: string[] = [];
-  for (let card of card_images) {
-    const url = await cardUpload(savedDetails[0].company_name!, card);
-    card_url.push(url);
+  if (card_images) {
+    for (let card of card_images) {
+      const url = await cardUpload(savedDetails[0].company_name!, card);
+      card_url.push(url);
+    }
   }
   const savedCards = await db
     .insert(companyCardImages)

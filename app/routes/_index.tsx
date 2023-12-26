@@ -1,9 +1,9 @@
 import {
   type MetaFunction,
-  DataFunctionArgs,
   json,
   unstable_createMemoryUploadHandler,
   unstable_parseMultipartFormData,
+  ActionFunctionArgs,
 } from "@remix-run/node";
 import Navbar from "~/components/navbar";
 import { z } from "zod";
@@ -17,7 +17,7 @@ import { SubmitButton } from "~/components/submit_button";
 import { addCompany } from "~/utils/company_details.server";
 import { useActionData } from "@remix-run/react";
 import FileInput from "~/components/file_input";
-
+import validator from "validator";
 export const meta: MetaFunction = () => {
   return [
     { title: "Balaji Customer Details" },
@@ -25,23 +25,29 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-export const validator = withZod(
+export const zod_validator = withZod(
   z
     .object({
-      name: z.string().min(1, { message: "First name is required" }),
-      email: z
-        .string()
-        .min(1, { message: "Email is required" })
-        .email("Must be valid email"),
-      company: z.string().min(1, { message: "Company is required" }),
-      address: z.string().min(1, { message: "Address is required" }),
+      name: z.string().min(1, { message: "Name is required" }),
+      email: zfd.text(
+        z
+          .string()
+          .min(1, { message: "Email is required" })
+          .email("Must be valid email")
+          .optional()
+      ),
+      company: zfd.text(
+        z.string().min(1, { message: "Company is required" }).optional()
+      ),
+      address: zfd.text(
+        z.string().min(1, { message: "Address is required" }).optional()
+      ),
       mobile: z
         .string()
-        .regex(/^\d+$/, "Mobile no. should have numbers")
-        .length(10, { message: "Mobile no should be 10 digits" }),
+        .refine(validator.isMobilePhone, { message: "Mobile no. invalid" }),
       machine: z.optional(zfd.repeatableOfType(z.string())).optional(),
       others: zfd.text(z.string().optional()),
-      cards: zfd.repeatableOfType(zfd.file()),
+      cards: zfd.file(zfd.repeatableOfType(z.instanceof(File)).optional()),
     })
     .refine(
       (schema) => {
@@ -57,12 +63,12 @@ export const validator = withZod(
     )
 );
 
-export async function action({ request }: DataFunctionArgs) {
+export async function action({ request }: ActionFunctionArgs) {
   const uploadHandler = unstable_createMemoryUploadHandler({
     maxPartSize: 5_000_000_000,
   });
 
-  const data = await validator.validate(
+  const data = await zod_validator.validate(
     await unstable_parseMultipartFormData(request, uploadHandler)
   );
   if (data.error) return json({ success: false, error: data.error });
@@ -89,7 +95,7 @@ export default function Index() {
       <Navbar />
       <div className="card">
         <ValidatedForm
-          validator={validator}
+          validator={zod_validator}
           method="post"
           encType="multipart/form-data"
           resetAfterSubmit
