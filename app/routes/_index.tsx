@@ -28,25 +28,16 @@ export const meta: MetaFunction = () => {
 export const zod_validator = withZod(
   z
     .object({
-      name: z.string().min(1, { message: "Name is required" }),
-      email: zfd.text(
-        z
-          .string()
-          .min(1, { message: "Email is required" })
-          .email("Must be valid email")
-          .optional()
-      ),
-      company: zfd.text(
-        z.string().min(1, { message: "Company is required" }).optional()
-      ),
-      address: zfd.text(
-        z.string().min(1, { message: "Address is required" }).optional()
-      ),
+      name: z.string(),
+      email: zfd.text(z.string().email("Must be valid email").optional()),
+      company: zfd.text(z.string().optional()),
+      address: zfd.text(z.string().optional()),
       mobile: z
         .string()
         .refine(validator.isMobilePhone, { message: "Mobile no. invalid" }),
       machine: z.optional(zfd.repeatableOfType(z.string())).optional(),
       others: zfd.text(z.string().optional()),
+      remarks: zfd.text(z.string().optional()),
       cards: zfd.file(zfd.repeatableOfType(z.instanceof(File)).optional()),
     })
     .refine(
@@ -75,12 +66,13 @@ export async function action({ request }: ActionFunctionArgs) {
   const result = await addCompany(
     {
       name: data.data.name,
-      email: data.data.email,
-      address: data.data.address,
-      company_name: data.data.company,
-      requirements: data.data.machine,
-      other_requirements: data.data.others,
+      email: data.data.email ?? "",
+      address: data.data.address ?? "",
+      company_name: data.data.company ?? "",
+      requirements: data.data.machine ?? [],
+      other_requirements: data.data.others ?? "",
       mobile_no: data.data.mobile,
+      remarks: data.data.remarks ?? "",
     },
     data.data.cards
   );
@@ -146,6 +138,11 @@ export default function Index() {
                 placeholder="Please Specify Other"
               />
             </fieldset>
+            <TextAreaInput
+              name="remarks"
+              label="Remarks"
+              placeholder="Enter Remarks"
+            />
             <FileInput name="cards" label="Upload Card Images" />
           </div>
           {data && data.error && (

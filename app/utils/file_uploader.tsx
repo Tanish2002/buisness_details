@@ -1,6 +1,9 @@
 import supabase from "./supabase";
 
 export const cardUpload = async (company_name: string, file: File) => {
+  if (company_name === "") {
+    company_name = "Unknown Company";
+  }
   const date = new Date();
   const upload = await supabase.storage
     .from(process.env.SUPABASE_BUCKET!)

@@ -12,6 +12,7 @@ export async function getAllCompanies() {
       mobile_no: true,
       requirements: true,
       other_requirements: true,
+      remarks: true,
     },
     with: {
       card_images: { columns: { image_url: true } },
@@ -40,7 +41,7 @@ export async function addCompany(
   let card_url: string[] = [];
   if (card_images) {
     for (let card of card_images) {
-      const url = await cardUpload(savedDetails[0].company_name!, card);
+      const url = await cardUpload(savedDetails[0].company_name, card);
       card_url.push(url);
     }
   }

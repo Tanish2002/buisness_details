@@ -1,8 +1,6 @@
-import { json } from "@remix-run/node";
-import { useLoaderData } from "@remix-run/react";
+import { Link, json, useLoaderData } from "@remix-run/react";
 import Navbar from "~/components/navbar";
 import { getAllCompanies } from "~/utils/company_details.server";
-import csvDownload from "json-to-csv-export";
 
 export async function loader() {
   const companies = await getAllCompanies();
@@ -16,23 +14,17 @@ export async function loader() {
   });
   return json(finalJSON);
 }
-
 const customerDetails = () => {
   const data = useLoaderData<typeof loader>();
-  const dataToConvert = {
-    data: data,
-    filename: "requirements_details",
-    delimiter: ", ",
-  };
   return (
     <>
       <Navbar />
-      <button
-        className="btn border-accent"
-        onClick={() => csvDownload(dataToConvert)}
-      >
-        Download Data
-      </button>
+      <Link to="csv" className="btn border-accent" reloadDocument>
+        Download CSV
+      </Link>
+      <Link to="pdf" className="btn border-accent" reloadDocument>
+        Download PDF
+      </Link>
       <div className="overflow-x-auto">
         <table className="table table-lg table-pin-rows table-pin-cols">
           <thead>
@@ -45,6 +37,7 @@ const customerDetails = () => {
               <td>Address</td>
               <td>Requirements</td>
               <td>Other Requirements</td>
+              <td>Remarks</td>
               <td>Card Images</td>
             </tr>
           </thead>
@@ -61,6 +54,7 @@ const customerDetails = () => {
                   {company.requirements && company.requirements.join(", ")}
                 </td>
                 <td>{company.other_requirements}</td>
+                <td>{company.remarks}</td>
                 <td>
                   {company.card_images &&
                     company.card_images.split("\n").map((url, idx) => (
@@ -86,6 +80,7 @@ const customerDetails = () => {
               <td>Address</td>
               <td>Requirements</td>
               <td>Other Requirements</td>
+              <td>Remarks</td>
               <td>Card Images</td>
             </tr>
           </tfoot>
