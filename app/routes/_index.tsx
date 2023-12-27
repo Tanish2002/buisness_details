@@ -39,6 +39,7 @@ export const zod_validator = withZod(
       others: zfd.text(z.string().optional()),
       remarks: zfd.text(z.string().optional()),
       cards: zfd.file(zfd.repeatableOfType(z.instanceof(File)).optional()),
+      urgent: zfd.checkbox({ trueValue: "urgent" }),
     })
     .refine(
       (schema) => {
@@ -73,6 +74,7 @@ export async function action({ request }: ActionFunctionArgs) {
       other_requirements: data.data.others ?? "",
       mobile_no: data.data.mobile,
       remarks: data.data.remarks ?? "",
+      urgent: data.data.urgent,
     },
     data.data.cards
   );
@@ -143,6 +145,7 @@ export default function Index() {
               label="Remarks"
               placeholder="Enter Remarks"
             />
+            <CheckBoxInput name="urgent" label="Urgent" value="urgent" />
             <FileInput name="cards" label="Upload Card Images" />
           </div>
           {data && data.error && (

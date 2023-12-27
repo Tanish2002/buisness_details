@@ -21,6 +21,7 @@ export async function loader() {
       { key: "requirements", displayLabel: "Machine Requirements" },
       { key: "other_requirements", displayLabel: "Other Requirements" },
       { key: "remarks", displayLabel: "Remarks" },
+      { key: "urgent", displayLabel: "Urgent" },
       { key: "card_images", displayLabel: "Card Image URLs" },
     ],
   });

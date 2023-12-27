@@ -14,19 +14,25 @@ export async function loader() {
       const field = form.getTextField(fieldName);
       field.setText(value);
     };
+    const setCheckBoxTrue = (fieldname: string) => {
+      const checkbox = form.getCheckBox(fieldname);
+      checkbox.check();
+    };
     setFormField("company", company.company_name);
     setFormField("name", company.name);
     setFormField("email", company.email);
     setFormField("address", company.address);
     setFormField("mobile", company.mobile_no);
+    setFormField("remarks", company.remarks);
+    if (company.urgent) setCheckBoxTrue("urgent");
 
     for (const requirement of company.requirements) {
-      const checkbox = form.getCheckBox(requirement);
-      checkbox.check();
+      setCheckBoxTrue(requirement);
     }
-    const checkbox = form.getCheckBox("Other");
-    checkbox.check();
-    setFormField("Other Value", company.other_requirements);
+    if (company.other_requirements !== "") {
+      setCheckBoxTrue("Other");
+      setFormField("Other Value", company.other_requirements);
+    }
 
     const [page] = await pdfDoc.copyPages(companyDoc, [0]);
     pdfDoc.addPage(page);

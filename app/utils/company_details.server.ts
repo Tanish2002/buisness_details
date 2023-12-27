@@ -13,6 +13,7 @@ export async function getAllCompanies() {
       requirements: true,
       other_requirements: true,
       remarks: true,
+      urgent: true,
     },
     with: {
       card_images: { columns: { image_url: true } },

@@ -1,4 +1,4 @@
-import { integer, pgTable, serial, text } from "drizzle-orm/pg-core";
+import { integer, pgTable, serial, text, boolean } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
 export const customerDetails = pgTable("customer_details", {
@@ -11,6 +11,7 @@ export const customerDetails = pgTable("customer_details", {
   requirements: text("requirements").array().notNull(),
   other_requirements: text("other_requirements").notNull(),
   remarks: text("remarks").notNull(),
+  urgent: boolean("urgent").notNull(),
 });
 
 export const customerRelations = relations(customerDetails, ({ one }) => ({

@@ -38,6 +38,7 @@ const customerDetails = () => {
               <td>Requirements</td>
               <td>Other Requirements</td>
               <td>Remarks</td>
+              <td>Urgent</td>
               <td>Card Images</td>
             </tr>
           </thead>
@@ -55,6 +56,7 @@ const customerDetails = () => {
                 </td>
                 <td>{company.other_requirements}</td>
                 <td>{company.remarks}</td>
+                <td>{company.urgent}</td>
                 <td>
                   {company.card_images &&
                     company.card_images.split("\n").map((url, idx) => (
@@ -81,6 +83,7 @@ const customerDetails = () => {
               <td>Requirements</td>
               <td>Other Requirements</td>
               <td>Remarks</td>
+              <td>Urgent</td>
               <td>Card Images</td>
             </tr>
           </tfoot>
