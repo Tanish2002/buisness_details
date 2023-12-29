@@ -1,6 +1,7 @@
 import { readFileSync } from "fs";
 import { PDFDocument, PDFImage } from "pdf-lib";
 import { getAllCompanies } from "~/utils/company_details.server";
+
 export async function loader() {
   const companies = await getAllCompanies();
   const fileContents = readFileSync(`./public/buisness_details.pdf`);
@@ -33,6 +34,9 @@ export async function loader() {
       setCheckBoxTrue("Other");
       setFormField("Other Value", company.other_requirements);
     }
+
+    // Flatten form fields
+    form.flatten();
 
     const [page] = await pdfDoc.copyPages(companyDoc, [0]);
     pdfDoc.addPage(page);
