@@ -7,7 +7,7 @@ export async function loader() {
   const finalJSON = companies.map((company) => {
     return {
       ...company,
-      card_images: company.card_images.image_url
+      card_images: company.card_images?.image_url
         ? company.card_images.image_url.join("\n")
         : null,
     };

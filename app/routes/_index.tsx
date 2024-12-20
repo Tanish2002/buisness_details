@@ -164,10 +164,10 @@ export default function Index() {
                 />
               </svg>
               {(data.error instanceof Error && (
-                <span>Error! {data.error.message}</span>
+                <span>Error! {JSON.stringify(data.error)}</span>
               )) ||
                 ("fieldErrors" in data.error && (
-                  <span>{`Error! ${data.error.fieldErrors}`}</span>
+                  <span>{`Error! ${JSON.stringify(data.error.fieldErrors)}`}</span>
                 ))}
             </div>
           )}
