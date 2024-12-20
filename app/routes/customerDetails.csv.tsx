@@ -6,11 +6,15 @@ export async function loader() {
   const finalJSON = companies.map((company) => {
     return {
       ...company,
-      card_images: company.card_images.image_url
+      // Join requirements array into a string
+      requirements: company.requirements.join(", "),
+      // Handle card images
+      card_images: company.card_images?.image_url
         ? company.card_images.image_url.join("\n")
         : null,
     };
   });
+
   const csvConfig = mkConfig({
     columnHeaders: [
       { key: "name", displayLabel: "Name" },
@@ -25,12 +29,15 @@ export async function loader() {
       { key: "card_images", displayLabel: "Card Image URLs" },
     ],
   });
+
   const csv = generateCsv(csvConfig)(finalJSON);
   const csvBuffer = new Uint8Array(Buffer.from(asString(csv)));
   return new Response(csvBuffer, {
     status: 200,
     headers: {
       "Content-Type": "text/csv",
+      // Add header for file download
+      "Content-Disposition": 'attachment; filename="customer-details.csv"',
     },
   });
 }

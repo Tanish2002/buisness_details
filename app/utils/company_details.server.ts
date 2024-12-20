@@ -1,6 +1,5 @@
 import { companyCardImages, customerDetails } from "~/lib/schema";
 import db from "./db.server";
-import { cardUpload } from "./file_uploader";
 
 export async function getAllCompanies() {
   const companies = await db.query.customerDetails.findMany({
@@ -32,26 +31,27 @@ export async function getAllCompaniesCSV() {
 }
 export async function addCompany(
   customerDetail: typeof customerDetails.$inferInsert,
-  card_images: File[] | undefined
+  card_urls: string[] | undefined
 ) {
   const savedDetails = await db
     .insert(customerDetails)
     .values(customerDetail)
     .returning();
 
-  let card_url: string[] = [];
-  if (card_images) {
-    for (let card of card_images) {
-      const url = await cardUpload(savedDetails[0].company_name, card);
-      card_url.push(url);
-    }
+  if (card_urls && card_urls.length > 0) {
+    const savedCards = await db
+      .insert(companyCardImages)
+      .values({ customer_id: savedDetails[0].id, image_url: card_urls })
+      .returning();
+
+    return {
+      customer_details: savedDetails,
+      card_details: savedCards,
+    };
   }
-  const savedCards = await db
-    .insert(companyCardImages)
-    .values({ customer_id: savedDetails[0].id, image_url: card_url })
-    .returning();
+
   return {
     customer_details: savedDetails,
-    card_details: savedCards,
+    card_details: [],
   };
 }

@@ -1,7 +1,6 @@
 import {
   type MetaFunction,
   json,
-  unstable_createMemoryUploadHandler,
   unstable_parseMultipartFormData,
   ActionFunctionArgs,
 } from "@remix-run/node";
@@ -18,6 +17,7 @@ import { addCompany } from "~/utils/company_details.server";
 import { useActionData } from "@remix-run/react";
 import FileInput from "~/components/file_input";
 import validator from "validator";
+import { createSupabaseUploadHandler } from "~/utils/supabase.server";
 export const meta: MetaFunction = () => {
   return [
     { title: "Balaji Customer Details" },
@@ -38,7 +38,14 @@ export const zod_validator = withZod(
       machine: z.optional(zfd.repeatableOfType(z.string())).optional(),
       others: zfd.text(z.string().optional()),
       remarks: zfd.text(z.string().optional()),
-      cards: zfd.file(zfd.repeatableOfType(z.instanceof(File)).optional()),
+      cards: zfd.repeatableOfType(
+        z.union([
+          // Handle File objects from form submission
+          z.instanceof(File),
+          // Handle string URLs after upload
+          z.string().url("Invalid URL format")
+        ])
+      ).optional(),
       urgent: zfd.checkbox({ trueValue: "urgent" }),
     })
     .refine(
@@ -56,14 +63,19 @@ export const zod_validator = withZod(
 );
 
 export async function action({ request }: ActionFunctionArgs) {
-  const uploadHandler = unstable_createMemoryUploadHandler({
-    maxPartSize: 5_000_000_000,
+  console.log(request)
+  const uploadHandler = createSupabaseUploadHandler({
+    supabaseUrl: process.env.SUPABASE_URL!,
+    supabaseKey: process.env.SUPABASE_API_KEY!,
+    bucket: process.env.SUPABASE_BUCKET!,
   });
 
   const data = await zod_validator.validate(
     await unstable_parseMultipartFormData(request, uploadHandler)
   );
   if (data.error) return json({ success: false, error: data.error });
+
+  // Since files are now already uploaded to Supabase, we just need to save the URLs
   const result = await addCompany(
     {
       name: data.data.name,
@@ -76,8 +88,9 @@ export async function action({ request }: ActionFunctionArgs) {
       remarks: data.data.remarks ?? "",
       urgent: data.data.urgent,
     },
-    data.data.cards
+    data.data.cards as string[] // This will now be URLs instead of File objects
   );
+
   console.log(`Added: ${JSON.stringify(result)}`);
   return json({ success: true, error: null });
 }

@@ -4,7 +4,9 @@ import { getAllCompanies } from "~/utils/company_details.server";
 
 export async function loader() {
   const companies = await getAllCompanies();
-  const fileContents = readFileSync(`./public/buisness_details.pdf`);
+  const fileContents = process.env.NODE_ENV === 'production'
+    ? await fetch(`https://${process.env.VERCEL_URL}/buisness_details.pdf`).then(res => res.arrayBuffer())
+    : readFileSync('./public/buisness_details.pdf');
 
   const pdfDoc = await PDFDocument.create();
 
@@ -50,6 +52,7 @@ export async function loader() {
       let yPosition = cardPage.getSize().height - cardPage.getSize().height / 5;
       for (const image of company.card_images.image_url) {
         const res = await fetch(image).then((res) => res.arrayBuffer());
+        console.log(res)
         const extension = getImageExtension(res);
 
         let pdf_image: PDFImage;
@@ -87,12 +90,18 @@ function getImageExtension(arrayBuffer: ArrayBuffer) {
     for (let i = 0; i < len; i++)
       signatureArr[i] = new Uint8Array(arrayBuffer)[i].toString(16);
     const signature = signatureArr.join("").toUpperCase();
+    console.log(signature)
 
     switch (signature) {
-      case "89504E47":
+      case "89504E47":  // PNG signature
         return "png";
-      case "FFD8FFDB":
-      case "FFD8FFE0":
+      case "FFD8FFD8": // JPEG/JFIF format
+      case "FFD8FFE0": // JPEG/JFIF format
+      case "FFD8FFE1": // JPEG/Exif format
+      case "FFD8FFE2": // JPEG/SPIFF format
+      case "FFD8FFE3": // JPEG/JFIF format
+      case "FFD8FFDB": // JPEG format
+      case "FFD8FFEE": // JPEG/JFIF format
         return "jpeg";
       default:
         return null;
