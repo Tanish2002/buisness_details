@@ -5,10 +5,15 @@ export async function loader() {
   const companies = await getAllCompanies();
   const finalJSON = companies.map((company) => {
     return {
-      ...company,
-      // Join requirements array into a string
+      company_name: company.company_name,
+      contacts: company.contacts
+        .map(c => `${c.name} (${c.email}, ${c.mobile_no})`)
+        .join("; "),
+      address: company.address,
       requirements: company.requirements.join(", "),
-      // Handle card images
+      other_requirements: company.other_requirements,
+      remarks: company.remarks,
+      urgent: company.urgent,
       card_images: company.card_images?.image_url
         ? company.card_images.image_url.join("\n")
         : null,
@@ -17,11 +22,9 @@ export async function loader() {
 
   const csvConfig = mkConfig({
     columnHeaders: [
-      { key: "name", displayLabel: "Name" },
-      { key: "email", displayLabel: "Email" },
       { key: "company_name", displayLabel: "Company Name" },
+      { key: "contacts", displayLabel: "Contacts" },
       { key: "address", displayLabel: "Address" },
-      { key: "mobile_no", displayLabel: "Mobile No." },
       { key: "requirements", displayLabel: "Machine Requirements" },
       { key: "other_requirements", displayLabel: "Other Requirements" },
       { key: "remarks", displayLabel: "Remarks" },
@@ -36,7 +39,6 @@ export async function loader() {
     status: 200,
     headers: {
       "Content-Type": "text/csv",
-      // Add header for file download
       "Content-Disposition": 'attachment; filename="customer-details.csv"',
     },
   });

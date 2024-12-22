@@ -18,56 +18,102 @@ import { useActionData } from "@remix-run/react";
 import FileInput from "~/components/file_input";
 import validator from "validator";
 import { createSupabaseUploadHandler } from "~/utils/supabase.server";
+import { useState } from "react";
+import { createDiskUploadHandler } from "~/utils/diskUpload.server";
+import path from "path"
+
 export const meta: MetaFunction = () => {
   return [
     { title: "Balaji Customer Details" },
     { name: "description", content: "Customer Details Saver" },
   ];
 };
+const formatValidationErrors = (error: any) => {
+  if (error instanceof Error) {
+    return error.message;
+  }
 
+  if ("fieldErrors" in error) {
+    return Object.entries(error.fieldErrors)
+      .map(([field, errors]) => {
+        if (field.startsWith('contacts.')) {
+          const [_, index, fieldName] = field.split('.');
+          return `Contact ${parseInt(index) + 1} ${fieldName}: ${errors}`;
+        }
+        return `${field}: ${errors}`;
+      })
+      .join('\n');
+  }
+
+  return JSON.stringify(error);
+};
+const ContactFields = ({ index, onRemove }: { index: number; onRemove?: () => void }) => (
+  <div className="border p-4 mb-4 relative">
+    <h3 className="text-lg font-bold mb-4">Contact {index + 1}</h3>
+    <TextInput
+      name={`contacts.${index}.name`}
+      label="Name"
+      placeholder="Enter Name"
+    />
+    <TextInput
+      name={`contacts.${index}.email`}
+      label="Email"
+      placeholder="Enter Email"
+    />
+    <TextInput
+      name={`contacts.${index}.mobile`}
+      label="Mobile No."
+      placeholder="Enter Mobile No."
+    />
+    {index > 0 && (
+      <button
+        type="button"
+        onClick={onRemove}
+        className="btn btn-error btn-sm absolute top-2 right-2"
+      >
+        Remove
+      </button>
+    )}
+  </div>
+);
 export const zod_validator = withZod(
-  z
-    .object({
-      name: z.string(),
-      email: zfd.text(z.string().email("Must be valid email").optional()),
-      company: zfd.text(z.string().optional()),
-      address: zfd.text(z.string().optional()),
-      mobile: z
-        .string()
-        .refine(validator.isMobilePhone, { message: "Mobile no. invalid" }),
-      machine: z.optional(zfd.repeatableOfType(z.string())).optional(),
-      others: zfd.text(z.string().optional()),
-      remarks: zfd.text(z.string().optional()),
-      cards: zfd.repeatableOfType(
-        z.union([
-          // Handle File objects from form submission
-          z.instanceof(File),
-          // Handle string URLs after upload
-          z.string().url("Invalid URL format")
-        ])
-      ).optional(),
-      urgent: zfd.checkbox({ trueValue: "urgent" }),
-    })
-    .refine(
-      (schema) => {
-        return (schema.machine === undefined || schema.machine.length === 0) &&
-          (schema.others === undefined || schema.others === "")
-          ? false
-          : true;
-      },
-      {
-        message: "Either Select a single machine or specify others",
-        path: ["others", "machine"],
-      }
-    )
+  z.object({
+    contacts: z.array(z.object({
+      name: z.string().min(1, "Name is required"),
+      email: z.string().email("Invalid email").optional(),
+      mobile: z.string().refine(validator.isMobilePhone, { message: "Invalid mobile number" }),
+    })).min(1, "At least one contact is required"),
+    company: zfd.text(z.string().min(1, "Company name is required")),
+    address: zfd.text(z.string().optional()),
+    machine: z.optional(zfd.repeatableOfType(z.string())).optional(),
+    others: zfd.text(z.string().optional()),
+    remarks: zfd.text(z.string().optional()),
+    cards: zfd.repeatableOfType(
+      z.union([
+        z.instanceof(File),
+        z.string()
+      ])
+    ).optional(),
+    urgent: zfd.checkbox({ trueValue: "urgent" }),
+  }).refine(
+    (schema) => {
+      return (schema.machine === undefined || schema.machine.length === 0) &&
+        (schema.others === undefined || schema.others === "")
+        ? false
+        : true;
+    },
+    {
+      message: "Either Select a single machine or specify others",
+      path: ["others", "machine"],
+    }
+  )
 );
 
 export async function action({ request }: ActionFunctionArgs) {
-  console.log(request)
   const uploadHandler = createSupabaseUploadHandler({
     supabaseUrl: process.env.SUPABASE_URL!,
     supabaseKey: process.env.SUPABASE_API_KEY!,
-    bucket: process.env.SUPABASE_BUCKET!,
+    bucket: "test_bucket"// process.env.SUPABASE_BUCKET!,
   });
 
   const data = await zod_validator.validate(
@@ -75,20 +121,25 @@ export async function action({ request }: ActionFunctionArgs) {
   );
   if (data.error) return json({ success: false, error: data.error });
 
-  // Since files are now already uploaded to Supabase, we just need to save the URLs
+  // Extract contacts from form data
+  const contacts = data.data.contacts.map(contact => ({
+    name: contact.name,
+    email: contact.email ?? "",
+    mobile_no: contact.mobile,
+  }));
+
+  // Create company with contacts
   const result = await addCompany(
     {
-      name: data.data.name,
-      email: data.data.email ?? "",
-      address: data.data.address ?? "",
       company_name: data.data.company ?? "",
+      address: data.data.address ?? "",
       requirements: data.data.machine ?? [],
       other_requirements: data.data.others ?? "",
-      mobile_no: data.data.mobile,
       remarks: data.data.remarks ?? "",
       urgent: data.data.urgent,
     },
-    data.data.cards as string[] // This will now be URLs instead of File objects
+    contacts,
+    data.data.cards as string[] // URLs of uploaded files
   );
 
   console.log(`Added: ${JSON.stringify(result)}`);
@@ -96,6 +147,15 @@ export async function action({ request }: ActionFunctionArgs) {
 }
 
 export default function Index() {
+  const [contacts, setContacts] = useState([{ id: 0 }]);
+
+  const addContact = () => {
+    setContacts([...contacts, { id: contacts.length }]);
+  };
+
+  const removeContact = (index: number) => {
+    setContacts(contacts.filter((_, i) => i !== index));
+  };
   const data = useActionData<typeof action>();
   return (
     <>
@@ -109,8 +169,6 @@ export default function Index() {
           className="card-body"
         >
           <div className="form-control">
-            <TextInput name="name" label="Name" placeholder="Enter Your Name" />
-
             <TextInput
               name="company"
               label="Company Name"
@@ -123,17 +181,21 @@ export default function Index() {
               placeholder="Enter Company Address"
             />
 
-            <TextInput
-              name="email"
-              label="Email ID"
-              placeholder="Enter Email ID"
-            />
+            {contacts.map((contact, index) => (
+              <ContactFields
+                key={contact.id}
+                index={index}
+                onRemove={index > 0 ? () => removeContact(index) : undefined}
+              />
+            ))}
 
-            <TextInput
-              name="mobile"
-              label="Mobile No."
-              placeholder="Enter Mobile No."
-            />
+            <button
+              type="button"
+              onClick={addContact}
+              className="btn btn-secondary mb-4"
+            >
+              Add Another Contact
+            </button>
 
             <fieldset>
               <legend className="text-2xl text-accent">
@@ -176,12 +238,9 @@ export default function Index() {
                   d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
                 />
               </svg>
-              {(data.error instanceof Error && (
-                <span>Error! {JSON.stringify(data.error)}</span>
-              )) ||
-                ("fieldErrors" in data.error && (
-                  <span>{`Error! ${JSON.stringify(data.error.fieldErrors)}`}</span>
-                ))}
+              <pre className="whitespace-pre-wrap">
+                {formatValidationErrors(data.error)}
+              </pre>
             </div>
           )}
           {data && data.success && (
