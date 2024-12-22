@@ -16,8 +16,8 @@ const FileInput = ({ name, label }: MyInputProps) => {
         {...getInputProps({
           id: name,
           type: "file",
-          // This combination works better on Android
-          accept: "image/*;capture=camera",
+          accept: "image/*",
+          // Removed 'capture' attribute to allow multiple selections
           multiple: true,
         })}
         className="file-input file-input-bordered w-full max-w-xs"

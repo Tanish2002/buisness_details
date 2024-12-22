@@ -113,7 +113,7 @@ export async function action({ request }: ActionFunctionArgs) {
   const uploadHandler = createSupabaseUploadHandler({
     supabaseUrl: process.env.SUPABASE_URL!,
     supabaseKey: process.env.SUPABASE_API_KEY!,
-    bucket: "test_bucket"// process.env.SUPABASE_BUCKET!,
+    bucket: process.env.SUPABASE_BUCKET!,
   });
 
   const data = await zod_validator.validate(

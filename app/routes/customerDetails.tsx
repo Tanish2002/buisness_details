@@ -1,20 +1,31 @@
+import { LoaderFunction } from "@remix-run/node";
 import { Link, json, useLoaderData } from "@remix-run/react";
 import Navbar from "~/components/navbar";
 import { getAllCompanies } from "~/utils/company_details.server";
 
-export async function loader() {
-  const companies = await getAllCompanies();
-  const finalJSON = companies.map((company) => {
-    return {
-      ...company,
-      card_images: company.card_images?.image_url
-        ? company.card_images.image_url.join("\n")
-        : null,
-    };
-  });
-  return json(finalJSON);
-}
-const customerDetails = () => {
+export const loader: LoaderFunction = async () => {
+  try {
+    const companies = await getAllCompanies();
+
+    // Transform the data to match our interface
+    const transformedCompanies = companies.map(company => ({
+      company_name: company.company_name,
+      contacts: company.contacts,
+      address: company.address,
+      requirements: company.requirements,
+      other_requirements: company.other_requirements,
+      remarks: company.remarks,
+      urgent: company.urgent,
+      card_images: company.card_images || { image_url: [] },
+    }));
+
+    return json(transformedCompanies);
+  } catch (error) {
+    console.error("Error fetching companies:", error);
+    throw new Response("Error loading companies", { status: 500 });
+  }
+};
+const CustomerDetails = () => {
   const data = useLoaderData<typeof loader>();
   return (
     <>
@@ -31,9 +42,7 @@ const customerDetails = () => {
             <tr>
               <th></th>
               <td>Company Name</td>
-              <td>Email</td>
-              <td>Name</td>
-              <td>Mobile No.</td>
+              <td>Contacts</td>
               <td>Address</td>
               <td>Requirements</td>
               <td>Other Requirements</td>
@@ -43,29 +52,41 @@ const customerDetails = () => {
             </tr>
           </thead>
           <tbody>
-            {data.map((company, idx) => (
+            {data.map((company: any, idx: any) => (
               <tr key={idx}>
                 <th>{idx + 1}</th>
                 <td>{company.company_name}</td>
-                <td>{company.email}</td>
-                <td>{company.name}</td>
-                <td>{company.mobile_no}</td>
+                <td>
+                  <div className="space-y-2">
+                    {company.contacts.map((contact: any, contactIdx: any) => (
+                      <div key={contactIdx} className="p-2 bg-base-200 rounded-lg">
+                        <p><strong>Name:</strong> {contact.name}</p>
+                        <p><strong>Email:</strong> {contact.email}</p>
+                        <p><strong>Mobile:</strong> {contact.mobile_no}</p>
+                      </div>
+                    ))}
+                  </div>
+                </td>
                 <td>{company.address}</td>
                 <td>
                   {company.requirements && company.requirements.join(", ")}
                 </td>
                 <td>{company.other_requirements}</td>
                 <td>{company.remarks}</td>
-                <td>{company.urgent}</td>
+                <td>{company.urgent ? "Yes" : "No"}</td>
                 <td>
-                  {company.card_images &&
-                    company.card_images.split("\n").map((url, idx) => (
-                      <span key={idx}>
-                        <a className="link link-success" href={url}>
-                          Link {idx + 1}
+                  {company.card_images && company.card_images.image_url &&
+                    company.card_images.image_url.map((url: any, imgIdx: any) => (
+                      <span key={imgIdx}>
+                        <a
+                          className="link link-success"
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Link {imgIdx + 1}
                         </a>
-                        {idx !== company.card_images!.split("\n").length - 1 &&
-                          " "}
+                        {imgIdx !== company.card_images.image_url.length - 1 && " "}
                       </span>
                     ))}
                 </td>
@@ -76,9 +97,7 @@ const customerDetails = () => {
             <tr>
               <th></th>
               <td>Company Name</td>
-              <td>Email</td>
-              <td>Name</td>
-              <td>Mobile No.</td>
+              <td>Contacts</td>
               <td>Address</td>
               <td>Requirements</td>
               <td>Other Requirements</td>
@@ -92,5 +111,5 @@ const customerDetails = () => {
     </>
   );
 };
+export default CustomerDetails;
 
-export default customerDetails;

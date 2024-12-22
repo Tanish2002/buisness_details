@@ -217,7 +217,6 @@ export const loader: LoaderFunction = async ({ request }) => {
         }
       })
     );
-    console.log(imageData)
 
     console.log('Processing PDF generation with image data');
     const stream = await renderToStream(
