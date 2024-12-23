@@ -89,9 +89,9 @@ export const zod_validator = withZod(
       id: z.string(),
       name: z.string().min(1, "Name is required"),
       email: z.string().
-        min(1, "Email is required").
-        email("Invalid email").optional().
-        or(z.literal('')),
+        min(1, "Email is required")
+        .optional()
+        .or(z.literal('')),
       mobile: z.string().min(1, "Mobile no is required"), /* refine(validator.isMobilePhone, { message: "Invalid mobile number" }) */
     })).min(1, "At least one contact is required"),
     company: zfd.text(z.string().min(1, "Company name is required")),
