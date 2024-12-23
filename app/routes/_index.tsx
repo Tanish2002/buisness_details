@@ -4,21 +4,21 @@ import {
   unstable_parseMultipartFormData,
   ActionFunctionArgs,
 } from "@remix-run/node";
-import Navbar from "~/components/navbar";
+import { useActionData } from "@remix-run/react";
 import { z } from "zod";
 import { withZod } from "@remix-validated-form/with-zod";
-import { ValidatedForm } from "remix-validated-form";
+import { ValidatedForm, useFieldArray } from "remix-validated-form";
 import { zfd } from "zod-form-data";
+import validator from "validator";
+import { nanoid } from "nanoid";
+import Navbar from "~/components/navbar";
 import { TextInput } from "~/components/text_input";
 import { TextAreaInput } from "~/components/textarea_input";
 import { CheckBoxInput } from "~/components/checkbox_input";
 import { SubmitButton } from "~/components/submit_button";
-import { addCompany } from "~/utils/company_details.server";
-import { useActionData } from "@remix-run/react";
 import FileInput from "~/components/file_input";
-import validator from "validator";
 import { createSupabaseUploadHandler } from "~/utils/supabase.server";
-import { useState } from "react";
+import { addCompany } from "~/utils/company_details.server";
 
 export const meta: MetaFunction = () => {
   return [
@@ -45,70 +45,6 @@ const formatValidationErrors = (error: any) => {
 
   return JSON.stringify(error);
 };
-const ContactFields = ({ index, onRemove }: { index: number; onRemove?: () => void }) => (
-  <div className="border p-4 mb-4 relative">
-    <h3 className="text-lg font-bold mb-4">Contact {index + 1}</h3>
-    <TextInput
-      name={`contacts.${index}.name`}
-      label="Name"
-      placeholder="Enter Name"
-    />
-    <TextInput
-      name={`contacts.${index}.email`}
-      label="Email"
-      placeholder="Enter Email"
-    />
-    <TextInput
-      name={`contacts.${index}.mobile`}
-      label="Mobile No."
-      placeholder="Enter Mobile No."
-    />
-    {index > 0 && (
-      <button
-        type="button"
-        onClick={onRemove}
-        className="btn btn-error btn-sm absolute top-2 right-2"
-      >
-        Remove
-      </button>
-    )}
-  </div>
-);
-export const zod_validator = withZod(
-  z.object({
-    contacts: z.array(z.object({
-      name: z.string().min(1, "Name is required"),
-      email: z.string().
-        min(1, "Email is required").
-        email("Invalid email").optional().
-        or(z.literal('')),
-      mobile: z.string().refine(validator.isMobilePhone, { message: "Invalid mobile number" }),
-    })).min(1, "At least one contact is required"),
-    company: zfd.text(z.string().min(1, "Company name is required")),
-    address: zfd.text(z.string().optional()),
-    machine: z.optional(zfd.repeatableOfType(z.string())).optional(),
-    others: zfd.text(z.string().optional()),
-    remarks: zfd.text(z.string().optional()),
-    cards: zfd.repeatableOfType(
-      z.union([
-        z.instanceof(File),
-        z.string()
-      ])
-    ).optional(),
-    urgent: zfd.checkbox({ trueValue: "urgent" }),
-  }).refine(
-    (schema) => {
-      return (schema.machine === undefined || schema.machine.length === 0) &&
-        (schema.others === undefined || schema.others === "")
-        ? false
-        : true;
-    },
-    {
-      message: "Either Select a single machine or specify others",
-      path: ["others", "machine"],
-    }
-  )
-);
 
 export async function action({ request }: ActionFunctionArgs) {
   const uploadHandler = createSupabaseUploadHandler({
@@ -147,26 +83,87 @@ export async function action({ request }: ActionFunctionArgs) {
   return json({ success: true, error: null });
 }
 
+export const zod_validator = withZod(
+  z.object({
+    contacts: z.array(z.object({
+      id: z.string(),
+      name: z.string().min(1, "Name is required"),
+      email: z.string().
+        min(1, "Email is required").
+        email("Invalid email").optional().
+        or(z.literal('')),
+      mobile: z.string().refine(validator.isMobilePhone, { message: "Invalid mobile number" }),
+    })).min(1, "At least one contact is required"),
+    company: zfd.text(z.string().min(1, "Company name is required")),
+    address: zfd.text(z.string().optional()),
+    machine: z.optional(zfd.repeatableOfType(z.string())).optional(),
+    others: zfd.text(z.string().optional()),
+    remarks: zfd.text(z.string().optional()),
+    cards: zfd.repeatableOfType(
+      z.union([
+        z.instanceof(File),
+        z.string()
+      ])
+    ).optional(),
+    urgent: zfd.checkbox({ trueValue: "urgent" }),
+  }).refine(
+    (schema) => {
+      return (schema.machine === undefined || schema.machine.length === 0) &&
+        (schema.others === undefined || schema.others === "")
+        ? false
+        : true;
+    },
+    {
+      message: "Either Select a single machine or specify others",
+      path: ["others", "machine"],
+    }
+  )
+);
+
+const ContactFields = ({ index }: { index: number }) => (
+  <div className="border p-4 mb-4 relative">
+    <h3 className="text-lg font-bold mb-4">Contact {index + 1}</h3>
+    <input
+      type="hidden"
+      name={`contacts[${index}].id`}
+      value={nanoid()}
+    />
+    <TextInput
+      name={`contacts[${index}].name`}
+      label="Name"
+      placeholder="Enter Name"
+    />
+    <TextInput
+      name={`contacts[${index}].email`}
+      label="Email"
+      placeholder="Enter Email"
+    />
+    <TextInput
+      name={`contacts[${index}].mobile`}
+      label="Mobile No."
+      placeholder="Enter Mobile No."
+    />
+  </div>
+);
+
 export default function Index() {
-  const [contacts, setContacts] = useState([{ id: 0 }]);
-
-  const addContact = () => {
-    setContacts([...contacts, { id: contacts.length }]);
-  };
-
-  const removeContact = (index: number) => {
-    setContacts(contacts.filter((_, i) => i !== index));
-  };
+  const [contacts, { push, remove }] = useFieldArray("contacts", {
+    formId: "company-details-form"
+  });
   const data = useActionData<typeof action>();
+
   return (
     <>
       <Navbar />
       <div className="card">
         <ValidatedForm
+          id="company-details-form"
           validator={zod_validator}
           method="post"
           encType="multipart/form-data"
-          resetAfterSubmit
+          defaultValues={{
+            contacts: [{ id: nanoid(), name: "", email: "", mobile: "" }]
+          }}
           className="card-body"
         >
           <div className="form-control">
@@ -182,17 +179,24 @@ export default function Index() {
               placeholder="Enter Company Address"
             />
 
-            {contacts.map((contact, index) => (
-              <ContactFields
-                key={contact.id}
-                index={index}
-                onRemove={index > 0 ? () => removeContact(index) : undefined}
-              />
+            {contacts.map(({ key }, index) => (
+              <div key={key} className="relative">
+                <ContactFields index={index} />
+                {index > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => remove(index)}
+                    className="btn btn-error btn-sm absolute top-2 right-2"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
             ))}
 
             <button
               type="button"
-              onClick={addContact}
+              onClick={() => push({ id: nanoid() })}
               className="btn btn-secondary mb-4"
             >
               Add Another Contact
@@ -216,6 +220,7 @@ export default function Index() {
                 placeholder="Please Specify Other"
               />
             </fieldset>
+
             <TextAreaInput
               name="remarks"
               label="Remarks"
@@ -224,6 +229,7 @@ export default function Index() {
             <CheckBoxInput name="urgent" label="Urgent" value="urgent" />
             <FileInput name="cards" label="Upload Card Images" />
           </div>
+
           {data && data.error && (
             <div className="alert alert-error">
               <svg
