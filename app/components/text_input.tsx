@@ -4,14 +4,19 @@ type MyInputProps = {
   name: string;
   label: string;
   placeholder: string;
+  required?: boolean;
 };
 
-export const TextInput = ({ name, label, placeholder }: MyInputProps) => {
+export const TextInput = ({ name, label, placeholder, required = false }: MyInputProps) => {
   const { error, getInputProps } = useField(name);
+
   return (
-    <div>
+    <div className="form-control w-full max-w-xs">
       <label htmlFor={name} className="label">
-        <span className="label-text text-accent">{label}</span>
+        <span className="label-text text-accent">
+          {label}
+          {required && <span className="text-error ml-1">*</span>}
+        </span>
       </label>
 
       <input
@@ -19,8 +24,9 @@ export const TextInput = ({ name, label, placeholder }: MyInputProps) => {
           id: name,
           type: "text",
           placeholder: placeholder,
+          required: required,
         })}
-        className="input input-bordered w-full max-w-xs"
+        className={`input input-bordered w-full max-w-xs ${error ? 'input-error' : ''}`}
       />
       {error && (
         <label className="label">

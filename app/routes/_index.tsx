@@ -19,8 +19,6 @@ import FileInput from "~/components/file_input";
 import validator from "validator";
 import { createSupabaseUploadHandler } from "~/utils/supabase.server";
 import { useState } from "react";
-import { createDiskUploadHandler } from "~/utils/diskUpload.server";
-import path from "path"
 
 export const meta: MetaFunction = () => {
   return [
@@ -80,7 +78,10 @@ export const zod_validator = withZod(
   z.object({
     contacts: z.array(z.object({
       name: z.string().min(1, "Name is required"),
-      email: z.string().email("Invalid email").optional(),
+      email: z.string().
+        min(1, "Email is required").
+        email("Invalid email").optional().
+        or(z.literal('')),
       mobile: z.string().refine(validator.isMobilePhone, { message: "Invalid mobile number" }),
     })).min(1, "At least one contact is required"),
     company: zfd.text(z.string().min(1, "Company name is required")),
