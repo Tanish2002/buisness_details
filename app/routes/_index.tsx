@@ -46,6 +46,26 @@ const formatValidationErrors = (error: any) => {
   return JSON.stringify(error);
 };
 
+const validateEmails = (emailString: string) => {
+  if (!emailString) return true; // Allow empty string
+  const emails = emailString.split(',').map(email => email.trim());
+  return emails.every(email => validator.isEmail(email));
+};
+
+const validatePhones = (phoneString: string) => {
+  if (!phoneString) return true; // Allow empty string
+  const phones = phoneString.split(',').map(phone => phone.trim());
+  return phones.every(phone => validator.isMobilePhone(phone));
+};
+
+export const processContactData = (contacts: any[]) => {
+  return contacts.map(contact => ({
+    name: contact.name,
+    email: contact.email.split(',').map((email: string) => email.trim()),
+    mobile_no: contact.mobile.split(',').map((mobile: string) => mobile.trim()),
+  }));
+};
+
 export async function action({ request }: ActionFunctionArgs) {
   const uploadHandler = createSupabaseUploadHandler({
     supabaseUrl: process.env.SUPABASE_URL!,
@@ -58,14 +78,10 @@ export async function action({ request }: ActionFunctionArgs) {
   );
   if (data.error) return json({ success: false, error: data.error });
 
-  // Extract contacts from form data
-  const contacts = data.data.contacts.map(contact => ({
-    name: contact.name,
-    email: contact.email ?? "",
-    mobile_no: contact.mobile,
-  }));
+  // Process contacts to split emails and mobile numbers into arrays
+  const processedContacts = processContactData(data.data.contacts);
 
-  // Create company with contacts
+  // Create company with processed contacts
   const result = await addCompany(
     {
       company_name: data.data.company ?? "",
@@ -75,11 +91,11 @@ export async function action({ request }: ActionFunctionArgs) {
       remarks: data.data.remarks ?? "",
       urgent: data.data.urgent,
     },
-    contacts,
-    data.data.cards as string[] // URLs of uploaded files
+    processedContacts,
+    data.data.cards as string[]
   );
 
-  console.log(`Added: ${JSON.stringify(result)}`);
+  console.log("Added: ", result);
   return json({ success: true, error: null });
 }
 
@@ -88,11 +104,17 @@ export const zod_validator = withZod(
     contacts: z.array(z.object({
       id: z.string(),
       name: z.string().min(1, "Name is required"),
-      email: z.string().
-        min(1, "Email is required")
-        .optional()
-        .or(z.literal('')),
-      mobile: z.string().min(1, "Mobile no is required"), /* refine(validator.isMobilePhone, { message: "Invalid mobile number" }) */
+      email: z.string()
+        .min(1, "Email is required")
+        .or(z.literal(''))
+        .refine(validateEmails, {
+          message: "One or more email addresses are invalid. Separate multiple emails with commas."
+        }),
+      mobile: z.string()
+        .min(1, "Mobile number is required")
+        .refine(validatePhones, {
+          message: "One or more mobile numbers are invalid. Separate multiple numbers with commas."
+        }),
     })).min(1, "At least one contact is required"),
     company: zfd.text(z.string().min(1, "Company name is required")),
     address: zfd.text(z.string().optional()),
@@ -136,12 +158,16 @@ const ContactFields = ({ index }: { index: number }) => (
     <TextInput
       name={`contacts[${index}].email`}
       label="Email"
-      placeholder="Enter Email"
+      placeholder="Enter Email (separate multiple with commas)"
+      multipleValues
+      helpText="Example: john@example.com, jane@example.com"
     />
     <TextInput
       name={`contacts[${index}].mobile`}
       label="Mobile No."
-      placeholder="Enter Mobile No."
+      placeholder="Enter Mobile No. (separate multiple with commas)"
+      multipleValues
+      helpText="Example: +1234567890, +9876543210"
     />
   </div>
 );
