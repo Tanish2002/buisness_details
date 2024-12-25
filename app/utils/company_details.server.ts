@@ -10,6 +10,7 @@ export async function getAllCompanies() {
       other_requirements: true,
       remarks: true,
       urgent: true,
+      createdAt: true,
     },
     with: {
       contacts: true,

@@ -1,4 +1,3 @@
-// app/routes/customerDetails.pdf.tsx
 import { renderToStream } from '@react-pdf/renderer';
 import { LoaderFunction } from '@remix-run/node';
 import { getAllCompanies } from '~/utils/company_details.server';
@@ -14,6 +13,33 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
     borderBottom: '1 solid #e0e0e0',
   },
+  dateHeader: {
+    backgroundColor: '#f0f4f8',
+    padding: '12 15',
+    marginBottom: 20,
+    borderRadius: 4,
+  },
+  dateText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#2c3e50',
+  },
+  metadata: {
+    flexDirection: 'column',  // Changed to column layout
+    gap: 8,  // Add spacing between elements
+  },
+  companyHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',  // Allow wrapping for long names
+    gap: 8,
+  },
+  createdAt: {
+    fontSize: 12,
+    color: '#666666',
+    fontStyle: 'italic',
+    alignSelf: 'flex-start',  // Align with the start of the container
+  },
   section: {
     margin: '15 0',
     padding: '10 15',
@@ -24,7 +50,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     color: '#2c3e50',
-    marginBottom: 15,
+    flexShrink: 1,  // Allow text to shrink if needed
   },
   subHeading: {
     fontSize: 18,
@@ -107,11 +133,28 @@ const fetchImageAsBase64 = async (url: string): Promise<string> => {
   return `data:${response.headers.get('content-type')};base64,${Buffer.from(buffer).toString('base64')}`;
 };
 
+const formatDate = (date: Date) => {
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+};
+
+const getDateString = (date: Date) => {
+  return date.toISOString().split('T')[0];
+};
+
 // Separate component for company details page
 const CompanyDetailsPage = ({ company }: any) => (
   <Page size="A4" style={styles.page}>
     <View style={styles.header}>
-      <Text style={styles.heading}>Company: {company.company_name}</Text>
+      <View style={styles.metadata}>
+        <View style={styles.companyHeader}>
+          <Text style={styles.heading}>Company: {company.company_name}</Text>
+        </View>
+        <Text style={styles.createdAt}>Created: {formatDate(company.createdAt)}</Text>
+      </View>
       {company.urgent && (
         <View style={styles.urgent}>
           <Text>⚠️ Urgent Action Required</Text>
@@ -163,28 +206,58 @@ const CardImagePage = ({ base64Image }: { base64Image: string }) => (
   </Page>
 );
 
+// Date header component
+const DateHeader = ({ date }: { date: Date }) => (
+  <Page size="A4" style={styles.page}>
+    <View style={styles.dateHeader}>
+      <Text style={styles.dateText}>{formatDate(date)}</Text>
+    </View>
+  </Page>
+);
+
 // Main document component
 const MyDocument = ({ companies, imageData }: {
   companies: any[],
   imageData: Record<string, string>
-}) => (
-  <Document>
-    {companies.map((company, index) => (
-      <>
-        <CompanyDetailsPage key={`company-${index}`} company={company} />
+}) => {
+  // Group companies by date
+  const groupedCompanies = companies.reduce((acc, company) => {
+    const dateString = getDateString(company.createdAt);
+    if (!acc[dateString]) {
+      acc[dateString] = [];
+    }
+    acc[dateString].push(company);
+    return acc;
+  }, {} as Record<string, typeof companies>);
 
-        {company.card_images && company.card_images.image_url &&
-          company.card_images.image_url.map((url: string, imageIndex: number) => (
-            <CardImagePage
-              key={`image-${index}-${imageIndex}`}
-              base64Image={imageData[url]}
-            />
-          ))
-        }
-      </>
-    ))}
-  </Document>
-);
+  // Sort dates in descending order
+  const sortedDates = Object.keys(groupedCompanies).sort((a, b) =>
+    new Date(b).getTime() - new Date(a).getTime()
+  );
+
+  return (
+    <Document>
+      {sortedDates.map(dateString => (
+        <>
+          <DateHeader key={`date-${dateString}`} date={new Date(dateString)} />
+          {groupedCompanies[dateString].map((company: any, index: any) => (
+            <>
+              <CompanyDetailsPage key={`company-${dateString}-${index}`} company={company} />
+              {company.card_images && company.card_images.image_url &&
+                company.card_images.image_url.map((url: string, imageIndex: number) => (
+                  <CardImagePage
+                    key={`image-${dateString}-${index}-${imageIndex}`}
+                    base64Image={imageData[url]}
+                  />
+                ))
+              }
+            </>
+          ))}
+        </>
+      ))}
+    </Document>
+  );
+};
 
 export const loader: LoaderFunction = async ({ request }) => {
   try {
@@ -212,8 +285,7 @@ export const loader: LoaderFunction = async ({ request }) => {
           imageData[url] = await fetchImageAsBase64(url);
         } catch (error) {
           console.error(`Error fetching image from ${url}:`, error);
-          // You might want to set a placeholder image here
-          imageData[url] = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='; // 1x1 transparent PNG
+          imageData[url] = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
         }
       })
     );

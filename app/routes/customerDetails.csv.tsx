@@ -3,8 +3,18 @@ import { getAllCompanies } from "~/utils/company_details.server";
 
 export async function loader() {
   const companies = await getAllCompanies();
+
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
   const finalJSON = companies.map((company) => {
     return {
+      createdAt: formatDate(company.createdAt),
       company_name: company.company_name,
       contacts: company.contacts
         .map(c => `${c.name} (${c.email}, ${c.mobile_no})`)
@@ -30,11 +40,13 @@ export async function loader() {
       { key: "remarks", displayLabel: "Remarks" },
       { key: "urgent", displayLabel: "Urgent" },
       { key: "card_images", displayLabel: "Card Image URLs" },
+      { key: "createdAt", displayLabel: "Created At" },
     ],
   });
 
   const csv = generateCsv(csvConfig)(finalJSON);
   const csvBuffer = new Uint8Array(Buffer.from(asString(csv)));
+
   return new Response(csvBuffer, {
     status: 200,
     headers: {

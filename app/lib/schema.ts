@@ -1,4 +1,4 @@
-import { integer, pgTable, serial, text, boolean } from "drizzle-orm/pg-core";
+import { integer, pgTable, serial, text, boolean, timestamp } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
 export const customerDetails = pgTable("customer_details", {
@@ -9,6 +9,7 @@ export const customerDetails = pgTable("customer_details", {
   other_requirements: text("other_requirements").notNull(),
   remarks: text("remarks").notNull(),
   urgent: boolean("urgent").notNull(),
+  createdAt: timestamp("createdat").defaultNow().notNull(), // Added column
 });
 
 export const companyContacts = pgTable("company_contacts", {
